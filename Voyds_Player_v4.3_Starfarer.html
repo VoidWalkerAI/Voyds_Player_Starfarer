@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Starfarer v3.0 | Ironclad</title>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-armor: #111111;
+            --bg-screen: #050505;
+            --color-amber: #ffb300;
+            --color-danger: #d32f2f;
+            --color-steel: #455a64;
+            --color-active: #00e676;
+            --border-heavy: 2px solid #333;
+            --font-head: 'Black Ops One', cursive;
+            --font-data: 'Share Tech Mono', monospace;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: #000;
+            color: var(--color-amber);
+            font-family: var(--font-data);
+            margin: 0; padding: 0;
+            height: 100dvh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- THE CHASSIS --- */
+        .padd-casing {
+            display: grid;
+            grid-template-rows: 60px 1fr 80px; /* Header, Screen, Controls */
+            height: 100%; width: 100%; max-width: 600px;
+            margin: 0 auto;
+            background: var(--bg-armor);
+            border: 4px solid #222;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* --- HEADER (Bolted Plate) --- */
+        .top-plate {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 15px;
+            background: linear-gradient(180deg, #222, #111);
+            border-bottom: 2px solid #444;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .brand {
+            font-family: var(--font-head); font-size: 1.5rem;
+            color: #888; text-shadow: -1px -1px 0 #000;
+            letter-spacing: 2px;
+        }
+        .status-light {
+            width: 12px; height: 12px; background: var(--color-active);
+            border-radius: 50%; box-shadow: 0 0 10px var(--color-active);
+            animation: blink 4s infinite;
+        }
+
+        /* --- MAIN SCREEN (The CRT Look) --- */
+        .screen-viewport {
+            background: var(--bg-screen);
+            margin: 10px; border: 2px solid #333;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            display: flex; flex-direction: column;
+            /* Scanline effect */
+            background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+        }
+
+        /* --- VISUALIZER (Top of Screen) --- */
+        .vis-container {
+            height: 80px; width: 100%;
+            border-bottom: 1px dashed #333;
+            background: #020202;
+        }
+        canvas { width: 100%; height: 100%; display: block; }
+
+        /* --- TRACK INFO --- */
+        .readout-panel {
+            padding: 15px; text-align: center;
+            border-bottom: 1px solid #222;
+        }
+        .track-name {
+            font-size: 1.1rem; color: var(--color-amber);
+            text-transform: uppercase; margin-bottom: 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .track-time { color: #555; font-size: 0.9rem; }
+
+        /* --- FILE LIST (Data Stream) --- */
+        .data-stream {
+            flex-grow: 1; overflow-y: auto;
+            padding: 5px;
+        }
+        .data-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; border-bottom: 1px solid #1a1a1a;
+            color: #666; transition: all 0.2s; cursor: pointer;
+        }
+        .data-row:hover { background: #0a0a0a; color: #888; }
+        .data-row.active {
+            background: rgba(255, 179, 0, 0.1);
+            color: var(--color-amber);
+            border-left: 3px solid var(--color-amber);
+        }
+        .btn-purge {
+            background: none; border: 1px solid #333; color: var(--color-danger);
+            font-family: var(--font-data); padding: 2px 8px; font-size: 0.7rem;
+        }
+
+        /* --- LOWER CONTROL DECK (Physical Interface) --- */
+        .control-deck {
+            background: #181818;
+            padding: 10px;
+            border-top: 2px solid #444;
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px; align-items: center;
+        }
+
+        /* --- TACTICAL SWITCHES --- */
+        .switch-panel {
+            grid-column: 1 / span 3;
+            display: flex; justify-content: space-around;
+            background: #111; padding: 8px; border-radius: 4px;
+            border: 1px solid #333; margin-bottom: 5px;
+        }
+        
+        .tac-switch {
+            display: flex; flex-direction: column; align-items: center;
+            font-size: 0.7rem; color: #666; font-weight: bold; letter-spacing: 1px;
+        }
+        
+        /* The Physical Toggle Look */
+        .toggle-input { display: none; }
+        .toggle-label {
+            width: 40px; height: 20px; background: #333;
+            border-radius: 2px; position: relative; margin-top: 5px;
+            box-shadow: inset 0 0 5px #000; cursor: pointer;
+        }
+        .toggle-label::after {
+            content: ''; position: absolute;
+            width: 18px; height: 16px; background: #555;
+            top: 2px; left: 2px; transition: 0.2s;
+            box-shadow: 0 1px 2px #000;
+        }
+        .toggle-input:checked + .toggle-label { background: #1a1a1a; }
+        .toggle-input:checked + .toggle-label::after {
+            left: 20px; background: var(--color-amber);
+            box-shadow: 0 0 5px var(--color-amber);
+        }
+
+        /* --- BIG BUTTONS --- */
+        .hard-btn {
+            background: #222; border: 1px solid #444; color: #888;
+            padding: 15px 0; font-family: var(--font-head);
+            text-transform: uppercase; cursor: pointer;
+            box-shadow: 0 4px 0 #000; position: relative; top: 0;
+            transition: 0.1s; text-align: center; font-size: 0.9rem;
+        }
+        .hard-btn:active { top: 4px; box-shadow: 0 0 0 #000; }
+        .hard-btn.active { color: var(--color-active); border-color: var(--color-active); text-shadow: 0 0 5px var(--color-active); }
+        .hard-btn.danger { color: var(--color-danger); border-color: var(--color-danger); }
+
+        /* Hidden standard audio element */
+        audio { display: none; }
+
+        /* Resume Banner */
+        #resumeBanner {
+            display: none; background: var(--color-amber); color: #000;
+            text-align: center; padding: 5px; font-weight: bold;
+            cursor: pointer;
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    </style>
+</head>
+<body>
+
+<div class="padd-casing">
+    
+    <div class="top-plate">
+        <div class="brand">STARFARER v3.0</div>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <div style="font-size:0.7rem; color:#555;">SYS: ONLINE</div>
+            <div class="status-light"></div>
+        </div>
+    </div>
+
+    <div class="screen-viewport">
+        <div class="vis-container">
+            <canvas id="visCanvas"></canvas>
+        </div>
+
+        <div id="resumeBanner" onclick="resumePlayback()">>> LOG ENTRY DETECTED: TAP TO RESUME <<</div>
+
+        <div class="readout-panel">
+            <div class="track-name" id="nowPlaying">SYSTEM IDLE</div>
+            <div class="track-time" id="timeDisplay">00:00</div>
+        </div>
+
+        <div class="data-stream" id="playlist"></div>
+    </div>
+
+    <div class="control-deck">
+        
+        <div class="switch-panel">
+            <div class="tac-switch">
+                BASS BOOST
+                <input type="checkbox" id="swBass" class="toggle-input" onchange="toggleBass()">
+                <label for="swBass" class="toggle-label"></label>
+            </div>
+            <div class="tac-switch">
+                VOCAL CLARITY
+                <input type="checkbox" id="swVocal" class="toggle-input" onchange="toggleVocal()">
+                <label for="swVocal" class="toggle-label"></label>
+            </div>
+            <div class="tac-switch">
+                SHUFFLE
+                <input type="checkbox" id="swShuffle" class="toggle-input" onchange="toggleShuffle()">
+                <label for="swShuffle" class="toggle-label"></label>
+            </div>
+        </div>
+
+        <button class="hard-btn" onclick="document.getElementById('fileInput').click()">LOAD</button>
+        <button class="hard-btn" id="btnPlay" onclick="togglePlay()">PLAY</button>
+        <button class="hard-btn danger" onclick="nukeVault()">PURGE</button>
+        
+    </div>
+
+    <input type="file" id="fileInput" multiple accept="audio/*" style="display:none" onchange="handleUpload(this.files)">
+    <audio id="audioPlayer" crossorigin="anonymous"></audio>
+
+</div>
+
+<script>
+    /* --- CONFIG --- */
+    const DB_NAME = 'StarfarerV3_Ironclad';
+    const STORE_NAME = 'cargo';
+    const BOOKMARK_KEY = 'starfarer_mark';
+    
+    let db;
+    let audio = document.getElementById('audioPlayer');
+    let playlistData = [];
+    let currentIndex = -1;
+    let isShuffle = false;
+
+    // AUDIO ENGINE (Web Audio API)
+    let audioCtx, source, bassFilter, vocalFilter, analyser, canvas, ctx;
+    let isAudioInit = false;
+
+    /* --- INITIALIZATION --- */
+    window.onload = function() {
+        initDB();
+        // UI Updates
+        audio.ontimeupdate = () => {
+            const m = Math.floor(audio.currentTime / 60);
+            const s = Math.floor(audio.currentTime % 60);
+            document.getElementById('timeDisplay').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            if(currentIndex >= 0 && !isShuffle) saveBookmark(); // Only bookmark in ordered mode
+        };
+        audio.onended = () => playNext();
+    };
+
+    function initDB() {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+            db = e.target.result;
+            if(!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        };
+        req.onsuccess = (e) => { db = e.target.result; scanFiles(); checkBookmark(); };
+    }
+
+    /* --- AUDIO ENGINE (The Real Stuff) --- */
+    function initAudioEngine() {
+        if (isAudioInit) return;
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            source = audioCtx.createMediaElementSource(audio);
+
+            // 1. Bass Filter (LowShelf @ 100Hz)
+            bassFilter = audioCtx.createBiquadFilter();
+            bassFilter.type = "lowshelf";
+            bassFilter.frequency.value = 100;
+            bassFilter.gain.value = 0; // Start flat
+
+            // 2. Vocal Filter (Peaking @ 3000Hz)
+            vocalFilter = audioCtx.createBiquadFilter();
+            vocalFilter.type = "peaking";
+            vocalFilter.frequency.value = 3000;
+            vocalFilter.Q.value = 1;
+            vocalFilter.gain.value = 0; // Start flat
+
+            // 3. Visualizer
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 64;
+
+            // CHAIN: Source -> Bass -> Vocal -> Analyser -> Out
+            source.connect(bassFilter);
+            bassFilter.connect(vocalFilter);
+            vocalFilter.connect(analyser);
+            analyser.connect(audioCtx.destination);
+
+            // Start drawing
+            canvas = document.getElementById('visCanvas');
+            ctx = canvas.getContext('2d');
+            drawVis();
+            
+            isAudioInit = true;
+        } catch(e) { console.log("Audio Engine Standby"); }
+    }
+
+    /* --- TACTICAL SWITCH LOGIC --- */
+    function toggleBass() {
+        if (!isAudioInit) initAudioEngine();
+        const on = document.getElementById('swBass').checked;
+        // Boost +10dB for Hull Vibration
+        bassFilter.gain.setTargetAtTime(on ? 12 : 0, audioCtx.currentTime, 0.1);
+    }
+
+    function toggleVocal() {
+        if (!isAudioInit) initAudioEngine();
+        const on = document.getElementById('swVocal').checked;
+        // Boost +8dB for Comms Clarity
+        vocalFilter.gain.setTargetAtTime(on ? 8 : 0, audioCtx.currentTime, 0.1);
+    }
+
+    function toggleShuffle() {
+        isShuffle = document.getElementById('swShuffle').checked;
+    }
+
+    /* --- VISUALIZER (The Radar) --- */
+    function drawVis() {
+        requestAnimationFrame(drawVis);
+        const buffer = analyser.frequencyBinCount;
+        const data = new Uint8Array(buffer);
+        analyser.getByteFrequencyData(data);
+
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const barW = (canvas.width / buffer) * 2.5;
+        let x = 0;
+
+        for(let i = 0; i < buffer; i++) {
+            const h = (data[i] / 255) * canvas.height;
+            // Color Logic: Amber Base -> Red Peak
+            if (h > canvas.height * 0.7) ctx.fillStyle = '#d32f2f';
+            else ctx.fillStyle = '#ffb300';
+            
+            ctx.fillRect(x, canvas.height - h, barW - 1, h);
+            x += barW;
+        }
+    }
+
+    /* --- PLAYBACK LOGIC --- */
+    function loadTrack(index) {
+        if(!isAudioInit) initAudioEngine();
+        if(index < 0 || index >= playlistData.length) return;
+        
+        currentIndex = index;
+        const track = playlistData[index];
+        const url = URL.createObjectURL(track.data);
+        
+        document.getElementById('nowPlaying').innerText = track.name;
+        audio.src = url;
+        audio.play();
+        document.getElementById('btnPlay').innerText = "PAUSE";
+        document.getElementById('btnPlay').classList.add('active');
+        
+        renderList();
+        
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function togglePlay() {
+        if (audio.paused) {
+            if(currentIndex === -1 && playlistData.length > 0) loadTrack(0);
+            else audio.play();
+            document.getElementById('btnPlay').innerText = "PAUSE";
+            document.getElementById('btnPlay').classList.add('active');
+        } else {
+            audio.pause();
+            document.getElementById('btnPlay').innerText = "PLAY";
+            document.getElementById('btnPlay').classList.remove('active');
+        }
+    }
+
+    function playNext() {
+        if (isShuffle) {
+            const r = Math.floor(Math.random() * playlistData.length);
+            loadTrack(r);
+        } else if (currentIndex + 1 < playlistData.length) {
+            loadTrack(currentIndex + 1);
+        } else {
+            document.getElementById('nowPlaying').innerText = "END OF DATA";
+            document.getElementById('btnPlay').classList.remove('active');
+        }
+    }
+
+    /* --- FILE MANAGEMENT --- */
+    function handleUpload(files) {
+        if (!files.length) return;
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        Array.from(files).forEach(f => tx.objectStore(STORE_NAME).add({ name: f.name, data: f }));
+        tx.oncomplete = () => scanFiles();
+    }
+
+    function scanFiles() {
+        playlistData = [];
+        const store = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME);
+        store.openCursor().onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+                playlistData.push({ ...cursor.value, key: cursor.key });
+                cursor.continue();
+            } else {
+                // Alphanumeric Sort
+                playlistData.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
+                renderList();
+                checkBookmark();
+            }
+        };
+    }
+
+    function renderList() {
+        const list = document.getElementById('playlist');
+        list.innerHTML = '';
+        playlistData.forEach((t, i) => {
+            const div = document.createElement('div');
+            div.className = `data-row ${i === currentIndex ? 'active' : ''}`;
+            div.innerHTML = `
+                <span onclick="loadTrack(${i})">${t.name}</span>
+                <button class="btn-purge" onclick="nukeOne(${t.key})">DEL</button>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function nukeOne(key) {
+        if(confirm("Purge file?")) {
+            db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).delete(key).onsuccess = scanFiles;
+        }
+    }
+
+    function nukeVault() {
+        if(confirm("CRITICAL: WIPE ALL MEMORY?")) {
+            db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).clear().onsuccess = () => {
+                localStorage.removeItem(BOOKMARK_KEY);
+                scanFiles();
+            };
+        }
+    }
+
+    /* --- BOOKMARK --- */
+    function saveBookmark() {
+        localStorage.setItem(BOOKMARK_KEY, JSON.stringify({ name: playlistData[currentIndex].name, time: audio.currentTime }));
+    }
+
+    function checkBookmark() {
+        const mark = JSON.parse(localStorage.getItem(BOOKMARK_KEY));
+        if (mark && playlistData.some(t => t.name === mark.name)) {
+            document.getElementById('resumeBanner').style.display = 'block';
+        }
+    }
+
+    function resumePlayback() {
+        const mark = JSON.parse(localStorage.getItem(BOOKMARK_KEY));
+        const idx = playlistData.findIndex(t => t.name === mark.name);
+        if (idx !== -1) {
+            document.getElementById('resumeBanner').style.display = 'none';
+            loadTrack(idx);
+            audio.onloadedmetadata = () => { audio.currentTime = mark.time; };
+        }
+    }
+
+</script>
+</body>
+</html>
