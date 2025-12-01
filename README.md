@@ -1,7 +1,7 @@
 # 🌌 Starfarer's PADD v3.5 (Omega Edition)
 ### The Ultimate Offline Media & Data Tri-Corder
 
-**[>> LAUNCH THE PADD (LIVE SYSTEM) <<](https://voidwalkerai.github.io/SageWire_Tools/Starfarer_PADD.html)**
+**[>> LAUNCH THE PADD (LIVE SYSTEM) <<]([https://voidwalkerai.github.io/SageWire_Tools/Starfarer_PADD.html](https://voidwalkerai.github.io/Voyds_Player_Starfarer/))**
 *(Note: Replace the link above with your actual GitHub Pages URL if different)*
 
 ---
